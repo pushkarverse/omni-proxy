@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--version", action="version", version=f"omni-proxy {__version__}")
     args = parser.parse_args()
 
-    config_path = args.config or os.environ.get("GEMINI_WEB2API_CONFIG") or find_config()
+    config_path = args.config or os.environ.get("OMNI_PROXY_CONFIG") or find_config()
     if config_path:
         load_config(config_path)
 

@@ -1,1 +1,1 @@
-"""Tests for gemini-web2api."""
+"""Tests for omni-proxy."""

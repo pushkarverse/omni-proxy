@@ -415,17 +415,17 @@ exportButton.addEventListener("click", async () => {
       openai_session_token: info.chatGptToken
     };
 
-    await downloadJson("gemini-auth.json", payload);
+    await downloadJson("omni-auth.json", payload);
 
     const exportedNames = EXPORT_ORDER.filter((name) => info.selected.has(name));
     setStatus(
-      `Created gemini-auth.json with ${exportedNames.length} cookie(s) and XSRF.\n\n` +
+      `Created omni-auth.json with ${exportedNames.length} cookie(s) and XSRF.\n\n` +
       `Session cookie: ${info.validation.sessionCookie}\n` +
       `XSRF: present\n` +
       `gemini_bl: ${info.pageMetadata.geminiBl ? "present" : "not present — current server setting will remain"}\n` +
       `auth_user: ${info.authUser ?? "null"}\n` +
       `ChatGPT Token: ${info.chatGptToken ? "present" : "missing"}\n\n` +
-      "Move the file into gemini-web2api and do not share it or commit it to Git.",
+      "Move the file into omni-proxy and do not share it or commit it to Git.",
       "ok"
     );
   } catch (error) {

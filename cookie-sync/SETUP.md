@@ -1,6 +1,6 @@
 # Omni Cookie Sync Setup
 
-Short guide for extracting fresh Gemini and ChatGPT auth data and applying it to `gemini-web2api`.
+Short guide for extracting fresh Gemini and ChatGPT auth data and applying it to `omni-proxy`.
 
 ## What this extension exports
 
@@ -13,19 +13,19 @@ The extension reads the current signed-in Gemini and ChatGPT sessions and export
 - `auth_user`
 - `openai_session_token` (ChatGPT)
 
-It saves them locally as `gemini-auth.json`.
+It saves them locally as `omni-auth.json`.
 
 ## Install and export
 
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
 3. Click **Load unpacked**
-4. Select the `omni-cookie-sync-extension` folder
+4. Select the `cookie-sync` folder
 5. Open [https://gemini.google.com/app](https://gemini.google.com/app) and [https://chatgpt.com/](https://chatgpt.com/)
 6. Sign in and refresh the pages
 7. Open the extension and click **Inspect session**
 8. Confirm the session looks ready
-9. Click **Export gemini-auth.json**
+9. Click **Export omni-auth.json**
 
 Expected ready state:
 
@@ -36,24 +36,24 @@ ChatGPT session token: present
 Session and XSRF are ready for export.
 ```
 
-## Apply it in `gemini-web2api`
+## Apply it in `omni-proxy`
 
 Move the exported file into the project:
 
 ```bash
-cd /path/to/gemini-web2api
+cd /path/to/omni-proxy
 
 WIN_HOME=$(wslpath "$(powershell.exe -NoProfile -Command '[Environment]::GetFolderPath(\"UserProfile\")' | tr -d '\r')")
-cp "$WIN_HOME/Downloads/gemini-auth.json" ./gemini-auth.json
-chmod 600 gemini-auth.json
+cp "$WIN_HOME/Downloads/omni-auth.json" ./omni-auth.json
+chmod 600 omni-auth.json
 ```
 
 Update `config.json`:
 
 ```bash
-cd /path/to/gemini-web2api
+cd /path/to/omni-proxy
 
-AUTH_FILE="$(pwd)/gemini-auth.json"
+AUTH_FILE="$(pwd)/omni-auth.json"
 tmp=$(mktemp)
 
 jq \
@@ -93,11 +93,11 @@ jq '{
 ## Restart and test
 
 ```bash
-systemctl --user restart gemini-proxy
+systemctl --user restart omni-proxy
 ```
 
 ```bash
-curl -sS http://127.0.0.1:10012/v1/chat/completions \
+curl -sS http://127.0.0.1:8081/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
@@ -113,4 +113,4 @@ curl -sS http://127.0.0.1:10012/v1/chat/completions \
 
 ## Keep it secret
 
-`gemini-auth.json` contains real sessions. Do not share it, print it, or commit it to Git.
+`omni-auth.json` contains real sessions. Do not share it, print it, or commit it to Git.

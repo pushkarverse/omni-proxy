@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Omni Cookie Sync",
   "version": "1.0",
-  "description": "Exports Gemini & ChatGPT cookies plus XSRF/build metadata for gemini-web2api.",
+  "description": "Exports Gemini & ChatGPT cookies plus XSRF/build metadata for omni-proxy.",
   "permissions": [
     "cookies",
     "downloads",

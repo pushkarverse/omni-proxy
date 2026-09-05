@@ -38,7 +38,7 @@ Traffic is dynamically and intelligently routed between Google (Gemini) and Open
 Built from the ground up on **FastAPI**, Omni-Proxy utilizes a 100% asynchronous event loop. This ensures non-blocking I/O operations, dramatically minimizing latency and maximizing throughput under heavy parallel request loads.
 
 ### 🎨 Native Image Generation
-Full support for DALL-E 3 image generation via the `/v1/images/generations` endpoint, natively routed through ChatGPT.
+Full support for AI image generation via the `/v1/images/generations` endpoint. Depending on the model you request, Omni-Proxy seamlessly routes generation tasks to either OpenAI (DALL-E 3) or Google Gemini (Imagen 3).
 
 ### 👁️ Vision & Multimodal Capabilities
 First-class support for image comprehension. Upload images via base64 encoding or direct URL links, powered seamlessly by Google Gemini's "Scotty" resumable upload protocol.
@@ -82,7 +82,7 @@ By default, Omni-Proxy can operate anonymously for basic Gemini routing. To unlo
 1. **ChatGPT**: Inject `"openai_session_token"` and `"openai_pow_token"` into `config.json`.
 2. **Gemini**: Mount your Gemini Advanced cookies into a `cookie.txt` file and reference it via `"cookie_file": "cookie.txt"`.
 
-*(Pro Tip: Utilize the bundled `omni-cookie-sync-extension` to effortlessly extract session tokens from your local browser).*
+*(Pro Tip: Utilize the bundled `cookie-sync` extension to effortlessly extract session tokens from your local browser. See the [Extension Setup Guide](cookie-sync/SETUP.md) for detailed instructions).*
 
 ### 3. Initialize the Server
 
@@ -108,6 +108,7 @@ Omni-Proxy actively maintains mappings for the following upstream models.
 | `gemini-3.5-flash-thinking` | Extended reasoning engine | Capable of massive (~20k char) outputs |
 | `gemini-3.1-pro` | Advanced reasoning & logic | *Requires active Gemini Advanced session* |
 | `gemini-flash-lite` | Ultra-fast, minimal latency | Ideal for high-throughput simple tasks |
+| `imagen-3` | Image Generation Engine | Automatically invoked for `/images/generations` |
 
 ### OpenAI ChatGPT Ecosystem
 | Model Identifier | Description | Notes |

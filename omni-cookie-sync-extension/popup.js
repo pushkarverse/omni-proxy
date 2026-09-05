@@ -33,13 +33,15 @@ const LOOKUP_URLS = [
   "https://gemini.google.com/app",
   "https://accounts.google.com/",
   "https://www.google.com/",
-  "https://google.com/"
+  "https://google.com/",
+  "https://chatgpt.com/"
 ];
 
 const statusEl = document.getElementById("status");
 const exportButton = document.getElementById("export");
 const inspectButton = document.getElementById("inspect");
-const openButton = document.getElementById("open");
+const openGeminiBtn = document.getElementById("open-gemini");
+const openChatGptBtn = document.getElementById("open-chatgpt");
 
 function setStatus(message, kind = "") {
   statusEl.textContent = message;
@@ -109,6 +111,22 @@ async function readGoogleCookies() {
   }
 
   return [...deduped.values()];
+}
+
+async function readChatGPTCookies() {
+  const stores = await chrome.cookies.getAllCookieStores();
+  let sessionToken = null;
+
+  for (const store of stores) {
+    const cookies = await chrome.cookies.getAll({ storeId: store.id, url: "https://chatgpt.com/" });
+    const tokenCookie = cookies.find(c => c.name === "__Secure-next-auth.session-token");
+    if (tokenCookie) {
+      sessionToken = tokenCookie.value;
+      break;
+    }
+  }
+
+  return sessionToken;
 }
 
 function selectBestCookies(cookies) {
@@ -258,9 +276,10 @@ async function readGeminiPageMetadata(tabs) {
 }
 
 async function buildInspection() {
-  const [cookies, tabs] = await Promise.all([
+  const [cookies, tabs, chatGptToken] = await Promise.all([
     readGoogleCookies(),
-    chrome.tabs.query({ url: "https://gemini.google.com/*" })
+    chrome.tabs.query({ url: "https://gemini.google.com/*" }),
+    readChatGPTCookies()
   ]);
 
   const selected = selectBestCookies(cookies);
@@ -279,7 +298,8 @@ async function buildInspection() {
     legacyMissing,
     available,
     authUser,
-    pageMetadata
+    pageMetadata,
+    chatGptToken
   };
 }
 
@@ -292,7 +312,8 @@ function inspectionMessage(info) {
     legacyMissing,
     available,
     authUser,
-    pageMetadata
+    pageMetadata,
+    chatGptToken
   } = info;
 
   const lines = [
@@ -304,6 +325,7 @@ function inspectionMessage(info) {
     `gemini_bl / cfb2h: ${pageMetadata.geminiBl ? "present" : "missing"}`,
     `auth_user: ${authUser ?? "default account"}`,
     `Page data source: ${pageMetadata.source || "unavailable"}`,
+    `ChatGPT session token: ${chatGptToken ? "present" : "missing"}`,
     "",
     `Legacy present: ${legacyPresent.join(", ") || "none"}`,
     `Legacy not visible to the extension: ${legacyMissing.join(", ") || "none"}`,
@@ -349,8 +371,12 @@ async function downloadJson(filename, payload) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-openButton.addEventListener("click", async () => {
+openGeminiBtn.addEventListener("click", async () => {
   await chrome.tabs.create({ url: "https://gemini.google.com/app" });
+});
+
+openChatGptBtn.addEventListener("click", async () => {
+  await chrome.tabs.create({ url: "https://chatgpt.com/" });
 });
 
 inspectButton.addEventListener("click", async () => {
@@ -385,7 +411,8 @@ exportButton.addEventListener("click", async () => {
       sapisid: info.selected.get("SAPISID").value,
       auth_user: info.authUser,
       xsrf_token: info.pageMetadata.xsrfToken,
-      gemini_bl: info.pageMetadata.geminiBl
+      gemini_bl: info.pageMetadata.geminiBl,
+      openai_session_token: info.chatGptToken
     };
 
     await downloadJson("gemini-auth.json", payload);
@@ -396,7 +423,8 @@ exportButton.addEventListener("click", async () => {
       `Session cookie: ${info.validation.sessionCookie}\n` +
       `XSRF: present\n` +
       `gemini_bl: ${info.pageMetadata.geminiBl ? "present" : "not present — current server setting will remain"}\n` +
-      `auth_user: ${info.authUser ?? "null"}\n\n` +
+      `auth_user: ${info.authUser ?? "null"}\n` +
+      `ChatGPT Token: ${info.chatGptToken ? "present" : "missing"}\n\n` +
       "Move the file into gemini-web2api and do not share it or commit it to Git.",
       "ok"
     );

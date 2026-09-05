@@ -1,305 +1,194 @@
-# gemini-web2api
+<div align="center">
+  <img src="logo.png" width="220" alt="Omni-Proxy Logo">
 
-<p align="center">
-  <img src="logo.png" width="200" alt="gemini-web2api logo">
-</p>
+  <h1>Omni-Proxy</h1>
+  <p><strong>A high-performance, unified API gateway for Google Gemini and OpenAI ChatGPT.</strong></p>
 
-[中文文档](README_CN.md)
+  <p>
+    <img alt="Python Version" src="https://img.shields.io/badge/python-3.8%2B-blue.svg">
+    <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi">
+    <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg">
+  </p>
 
-Convert Google Gemini's web interface into an OpenAI-compatible API. Zero cost, cross-platform, single file.
+  <p>
+    <a href="#-key-features">Key Features</a> •
+    <a href="#-getting-started">Getting Started</a> •
+    <a href="#-supported-models">Models</a> •
+    <a href="#-advanced-configuration">Advanced Config</a>
+  </p>
+</div>
 
-## Features
+---
 
-- **Optional API Keys**: no auth when `api_keys` is empty, OpenAI-style Bearer auth when configured
-- **OpenAI Compatible**: Drop-in replacement for `/v1/chat/completions` and `/v1/models`
-- **Tool Calling**: Full function calling support (OpenAI format)
-- **Multiple Models**: Flash (3.6), Extended Thinking (20k+ char output), Pro, Auto, Lite
-- **Thinking Depth**: Adjustable via `@think=N` suffix (0=deepest, 4=shallowest)
-- **Web Search**: Built-in internet access (Gemini's native search)
-- **Cross-Platform**: Pure Python, single optional dependency (`httpx` for streaming)
-- **Streaming**: SSE streaming support via `httpx`
-- **Codex CLI**: Responses API (`/v1/responses`) for OpenAI Codex integration
-- **Gemini CLI**: Google native API (`/v1beta/models`) for Gemini CLI compatibility
+**Omni-Proxy** is an ultra-fast, zero-cost reverse proxy that bridges the web interfaces of Google Gemini and OpenAI ChatGPT behind a single, unified, OpenAI-compatible API. 
 
-## Quick Start
+Engineered entirely on modern asynchronous Python (FastAPI & HTTPX), Omni-Proxy is built to handle highly concurrent enterprise loads while remaining incredibly lightweight. By intelligently routing requests based on model parameters, it allows developers to harness the power of both Gemini and ChatGPT natively within existing OpenAI-compatible toolchains.
+
+---
+
+## 🌟 Key Features
+
+### 🔌 Seamless Universal API
+Omni-Proxy acts as a perfect drop-in replacement for standard OpenAI SDKs. It natively exposes `/v1/chat/completions`, `/v1/images/generations`, and `/v1/models` endpoints, allowing integration with any OpenAI-compatible client (Cursor, ChatBox, LangChain, etc.) with zero code changes.
+
+### 🧠 Intelligent Multi-Provider Routing
+Traffic is dynamically and intelligently routed between Google (Gemini) and OpenAI (ChatGPT) based purely on the `model` parameter you request. The proxy handles the complex backend protocols invisibly.
+
+### ⚡ Blazing Fast Architecture
+Built from the ground up on **FastAPI**, Omni-Proxy utilizes a 100% asynchronous event loop. This ensures non-blocking I/O operations, dramatically minimizing latency and maximizing throughput under heavy parallel request loads.
+
+### 🎨 Native Image Generation
+Full support for DALL-E 3 image generation via the `/v1/images/generations` endpoint, natively routed through ChatGPT.
+
+### 👁️ Vision & Multimodal Capabilities
+First-class support for image comprehension. Upload images via base64 encoding or direct URL links, powered seamlessly by Google Gemini's "Scotty" resumable upload protocol.
+
+### 🛠️ Native Tool Calling
+Strict adherence to the OpenAI function-calling schema. Omni-Proxy parses and translates complex tool payloads between OpenAI specifications and Gemini's internal proprietary formats on the fly.
+
+### 🔍 Configurable Reasoning Depth
+Control Gemini's internal reasoning loop dynamically by appending `@think=N` to supported model strings (e.g., `gemini-3.5-flash-thinking@think=0`), allowing for granular control over latency versus output depth.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.8 or higher
+- A modern package manager (`pip` or `uv`)
+
+### 1. Installation
+
+Clone the repository and install the required dependencies:
 
 ```bash
-pip install httpx
-python gemini_web2api.py
+git clone https://github.com/yourusername/omni-proxy.git
+cd omni-proxy
+
+# Install async dependencies
+pip install fastapi uvicorn httpx sqlalchemy
 ```
 
-Server starts at `http://localhost:8081/v1`.
+### 2. Configuration Setup
 
-## Client Configuration
+Copy the configuration template to initialize your local environment:
+```bash
+cp config.example.json config.json
+```
 
-### Cherry Studio / ChatBox / any OpenAI client
+**Authentication (Optional but Recommended):**
+By default, Omni-Proxy can operate anonymously for basic Gemini routing. To unlock advanced features (ChatGPT, DALL-E 3, and Gemini Pro), you must provision the proxy with your web session cookies:
 
-| Field | Value |
-|-------|-------|
-| Base URL | `http://localhost:8081/v1` |
-| API Key | any `api_keys` value from `config.json`; anything if not configured |
-| Model | `gemini-3.5-flash-thinking` |
+1. **ChatGPT**: Inject `"openai_session_token"` and `"openai_pow_token"` into `config.json`.
+2. **Gemini**: Mount your Gemini Advanced cookies into a `cookie.txt` file and reference it via `"cookie_file": "cookie.txt"`.
 
-### curl
+*(Pro Tip: Utilize the bundled `omni-cookie-sync-extension` to effortlessly extract session tokens from your local browser).*
 
-#### bash / macOS / Linux
+### 3. Initialize the Server
+
+Launch the ASGI server via Uvicorn:
 
 ```bash
-curl http://localhost:8081/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk-your-key" \
-  -d '{"model":"gemini-3.5-flash","messages":[{"role":"user","content":"Hello!"}]}'
+uvicorn omni_apis.api:app --host 0.0.0.0 --port 8081
 ```
 
-#### PowerShell (Windows)
+The unified API will be exposed at `http://localhost:8081/v1`.
 
-```powershell
-curl.exe --% http://127.0.0.1:8081/v1/chat/completions -H "Content-Type: application/json" -H "Authorization: Bearer sk-your-key" -d "{\"model\":\"gemini-3.5-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello!\"}]}"
-```
+---
 
-> Note: On Windows PowerShell, use `curl.exe` and `--%` so PowerShell does not reinterpret JSON quoting or curl options.
+## 🤖 Supported Models
 
-### OpenAI Python SDK
+Omni-Proxy actively maintains mappings for the following upstream models.
+
+### Google Gemini Ecosystem
+| Model Identifier | Description | Notes |
+|------------------|-------------|-------|
+| `gemini-3.7-flash` | Latest iteration of the Flash architecture | Highly capable all-around model |
+| `gemini-3.6-flash` | Standard Flash model | **Default proxy fallback** |
+| `gemini-3.5-flash-thinking` | Extended reasoning engine | Capable of massive (~20k char) outputs |
+| `gemini-3.1-pro` | Advanced reasoning & logic | *Requires active Gemini Advanced session* |
+| `gemini-flash-lite` | Ultra-fast, minimal latency | Ideal for high-throughput simple tasks |
+
+### OpenAI ChatGPT Ecosystem
+| Model Identifier | Description | Notes |
+|------------------|-------------|-------|
+| `gpt-4o` | Standard GPT-4 Omni | *Requires active ChatGPT session* |
+| `gpt-4o-mini` | Optimized, lightweight GPT-4o | *Requires active ChatGPT session* |
+| `gpt-3.5-turbo` | Legacy GPT architecture | *Requires active ChatGPT session* |
+| `dall-e-3` | Image Generation Engine | Automatically invoked for `/images/generations` |
+
+---
+
+## 💻 Integration Examples
+
+Omni-Proxy is designed for frictionless integration into existing automated pipelines.
+
+### Python (OpenAI SDK)
 
 ```python
 from openai import OpenAI
-client = OpenAI(base_url="http://localhost:8081/v1", api_key="sk-your-key")
-resp = client.chat.completions.create(
-    model="gemini-3.5-flash-thinking",
-    messages=[{"role": "user", "content": "Explain quantum computing"}]
+
+# Initialize client pointing to the local proxy
+client = OpenAI(base_url="http://localhost:8081/v1", api_key="sk-your-secure-key")
+
+# Text Completion (Routed to ChatGPT)
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Explain the architecture of a reverse proxy."}]
 )
-print(resp.choices[0].message.content)
-```
+print(response.choices[0].message.content)
 
-### Gemini CLI
-
-```bash
-export GEMINI_API_KEY=none
-export GOOGLE_GEMINI_BASE_URL=http://localhost:8081
-gemini
-```
-
-Supports Google native API endpoints:
-- `GET /v1beta/models` — list models
-- `POST /v1beta/models/{model}:generateContent` — non-streaming
-- `POST /v1beta/models/{model}:streamGenerateContent` — streaming (SSE)
-
-## Available Models
-
-| Model | Description | Output |
-|-------|-------------|--------|
-| `gemini-3.6-flash` | All-around model (latest) | ~12k chars |
-| `gemini-3.5-flash` | Alias for gemini-3.6-flash | ~12k chars |
-| `gemini-3.5-flash-thinking` | Extended thinking, longest output | **~20k chars** |
-| `gemini-3.5-flash-thinking-lite` | Adaptive thinking depth | ~15k chars |
-| `gemini-3.1-pro` | Advanced math & code (needs cookie) | ~12k chars |
-| `gemini-auto` | Auto model selection | varies |
-| `gemini-flash-lite` | Fastest answers, lightweight | ~10k chars |
-
-### Thinking Depth
-
-Append `@think=N` to any model name:
-
-```
-gemini-3.5-flash-thinking@think=0   # deepest (default)
-gemini-3.5-flash-thinking@think=2   # medium
-gemini-3.5-flash-thinking@think=4   # shallowest
-```
-
-## Optional: Cookie for Pro
-
-Anonymous access works for all models, but `gemini-3.1-pro` routes to Flash without authentication. To get real Pro routing, you need a **Gemini Advanced (paid subscription)** account cookie:
-
-```bash
-python gemini_web2api.py --cookie-file cookie.txt
-```
-
-### How to get cookies
-
-1. Open Chrome, go to [gemini.google.com](https://gemini.google.com) and sign in with a **Gemini Advanced** Google account
-2. Open DevTools (F12) → Application → Cookies → `https://gemini.google.com`
-3. Copy these cookie values: `SID`, `HSID`, `SSID`, `APISID`, `SAPISID`, `__Secure-1PSID`
-4. Create `cookie.txt` in this format:
-
-```
-SID=your_sid_value; HSID=your_hsid_value; SSID=your_ssid_value; APISID=your_apisid_value; SAPISID=your_sapisid_value; __Secure-1PSID=your_1psid_value
-```
-
-Or use the JSON format:
-```json
-{"cookie": "SID=xxx; HSID=xxx; SSID=xxx; APISID=xxx; SAPISID=xxx; __Secure-1PSID=xxx", "sapisid": "your_sapisid_value"}
-```
-
-**Alternative (browser extension)**: Use any "Export Cookies" extension to export cookies for `gemini.google.com` in Netscape format, then convert to the single-line format above.
-
-### Authenticated account path and XSRF token
-
-If the signed-in Gemini page URL contains an account index, such as:
-
-```
-https://gemini.google.com/u/1/app/...
-```
-
-set `auth_user` to that index. Authenticated web requests may also require the page XSRF token. In the rendered Gemini page source, this token is exposed as `SNlM0e`; pass it as `xsrf_token` in `config.json`. The server sends it as the `at` form field.
-
-Example:
-
-```json
-{
-  "cookie_file": "/app/cookie.txt",
-  "auth_user": "1",
-  "xsrf_token": "AOOh0P...",
-  "gemini_bl": "boq_assistant-bard-web-server_YYYYMMDD.xx_p0"
-}
-```
-
-If authenticated requests return HTTP 400 with an `xsrf` error, refresh Gemini Web, update `xsrf_token`, and make sure `auth_user` matches the `/u/<index>/` part of the browser URL.
-
-Pro routing requires **Gemini Advanced** (paid subscription). A free Google account cookie will authenticate but silently fall back to Flash.
-
-## Configuration
-
-Create `config.json` in the same directory:
-
-```json
-{
-  "port": 8081,
-  "host": "0.0.0.0",
-  "retry_attempts": 3,
-  "retry_delay_sec": 2,
-  "request_timeout_sec": 180,
-  "gemini_bl": "boq_assistant-bard-web-server_20260716.08_p0",
-  "auth_user": null,
-  "xsrf_token": null,
-  "api_keys": ["sk-your-key"],
-  "cookie_file": null,
-  "proxy": null,
-  "log_requests": true,
-  "temporary_chats": false
-}
-```
-
-Set `temporary_chats` to `true` to use Gemini Web temporary chats instead of
-persisting conversations to the account history.
-
-When `api_keys` is `[]`, authentication is disabled. When one or more keys are set, `/v1/*` endpoints require `Authorization: Bearer <key>` or `x-api-key: <key>`.
-
-## Docker
-
-```bash
-cp config.example.json config.json
-docker build -t gemini-web2api .
-docker run -d --name gemini-web2api -p 8081:8081 -v ./config.json:/app/config.json gemini-web2api
-```
-
-Or use Docker Compose:
-
-```bash
-cp config.example.json config.json
-docker compose up -d
-```
-
-To mount a cookie file:
-
-```bash
-docker run -d --name gemini-web2api -p 8081:8081 -v ./config.json:/app/config.json -v ./cookie.txt:/app/cookie.txt gemini-web2api
-```
-
-Set `"cookie_file": "/app/cookie.txt"` in `config.json`.
-
-> **Note**: If you get empty responses (`content: null`) with Docker's default bridge network, switch to host networking: `docker run --network host ...` or add `network_mode: host` in your compose file. This is caused by Gemini's upstream rejecting requests from certain Docker NAT IP ranges.
-
-## Proxy
-
-If you cannot access `gemini.google.com` directly (connection timeout), configure a proxy:
-
-**Method 1: CLI argument**
-```bash
-python gemini_web2api.py --proxy http://127.0.0.1:7890
-```
-
-**Method 2: config.json**
-```json
-{"proxy": "http://127.0.0.1:7890"}
-```
-
-**Method 3: Environment variable** (auto-detected)
-```bash
-export HTTPS_PROXY=http://127.0.0.1:7890
-python gemini_web2api.py
-```
-
-Works with Clash, V2Ray, Shadowsocks, or any HTTP proxy.
-
-## Tool Calling
-
-```python
-resp = client.chat.completions.create(
-    model="gemini-3.5-flash",
-    messages=[{"role": "user", "content": "What's the weather in Tokyo?"}],
-    tools=[{
-        "type": "function",
-        "function": {
-            "name": "get_weather",
-            "description": "Get weather for a city",
-            "parameters": {"type": "object", "properties": {"city": {"type": "string"}}, "required": ["city"]}
-        }
-    }]
-)
-```
-
-## Image Input
-
-OpenAI-style multimodal messages are supported for Chat Completions and the
-Responses API. Use either HTTP(S) image URLs or base64 data URLs:
-
-```python
-resp = client.chat.completions.create(
+# Multimodal Vision (Routed to Gemini)
+vision_response = client.chat.completions.create(
     model="gemini-3.6-flash",
     messages=[{
         "role": "user",
         "content": [
-            {"type": "text", "text": "Describe this image"},
-            {"type": "image_url", "image_url": {"url": "https://example.com/image.png"}}
+            {"type": "text", "text": "Analyze the structural integrity of this bridge."},
+            {"type": "image_url", "image_url": {"url": "https://example.com/bridge.png"}}
         ]
     }]
 )
 ```
 
-## Limitations
+### cURL (Direct API Access)
 
-- **Image upload may require cookies**: Multimodal input uses Gemini Web's image upload endpoint. If anonymous upload fails, configure a Gemini cookie.
-- **Not real Pro/Ultra**: Without a paid subscription cookie, `gemini-3.1-pro` routes to the same Flash model. The "Pro" label is a UI preference, not a backend model switch.
-- **Single-turn only**: Each request is an independent conversation. Multi-turn context is simulated by including previous messages in the prompt.
-- **Rate limits**: Google may throttle high-frequency requests. The server retries automatically but sustained heavy use may be blocked.
-
-## Requirements
-
-- Python 3.8+
-- `httpx` (`pip install httpx`) — used for streaming requests
-- Network access to `gemini.google.com` (proxy/VPN may be needed in some regions)
-
-## How It Works
-
-This tool reverse-engineers Google Gemini's web StreamGenerate protocol. It sends requests to the same endpoint that the Gemini web app uses, converting between OpenAI's API format and Gemini's internal protobuf-like format.
-
-The model selection is controlled by field `[79]` in the request payload, mapped from Gemini's frontend JavaScript source (`MODE_CATEGORY` enum).
-
-## Acknowledgments
-
-- Inspired by the open-source API proxy ecosystem
-
-## License
-
-MIT
+```bash
+curl -X POST http://localhost:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-your-secure-key" \
+  -d '{
+    "model": "gemini-3.5-flash-thinking@think=0",
+    "messages": [{"role": "user", "content": "Initialize system diagnostic."}]
+  }'
+```
 
 ---
 
-## 致谢
+## 🛠️ Advanced Configuration
 
-本项目的开发 agent 能力由 [GenericAgent](https://github.com/lsdefine/GenericAgent) 提供。
+### API Key Authentication
+For enterprise or remote deployments, secure your endpoints by populating the `"api_keys"` array in `config.json`. When populated, the proxy strictly enforces token validation via the standard `Authorization: Bearer <key>` header on all incoming requests.
 
-### 🚩 友情链接
+### Containerized Deployment (Docker)
+Omni-Proxy provides out-of-the-box Docker support for isolated environment execution.
 
-[![GenericAgent](https://img.shields.io/badge/Agent_Framework-GenericAgent-orange?style=for-the-badge&logo=github)](https://github.com/lsdefine/GenericAgent)
-[![LinuxDo](https://img.shields.io/badge/社区-LinuxDo-blue?style=for-the-badge)](https://linux.do/)
+```bash
+# Prepare configuration
+cp config.example.json config.json
+
+# Build and deploy the container
+docker build -t omni-proxy .
+docker run -d --name omni-proxy -p 8081:8081 -v ./config.json:/app/config.json omni-proxy
+```
+
+---
+
+## 🔒 Security & Architecture Notes
+- **Upstream Volatility**: ChatGPT routing leverages undocumented internal web APIs (`/backend-api/`). While Omni-Proxy intelligently manages caching and Proof-of-Work (PoW) security challenges, rapid upstream architectural shifts by OpenAI may necessitate proxy updates.
+- **State Isolation**: Omni-Proxy treats all incoming requests statelessly. Multi-turn conversation context is simulated exclusively by analyzing the `messages` array in the request payload.
+
+---
+
+## 📝 License
+Distributed under the MIT License. See `LICENSE` for more information.

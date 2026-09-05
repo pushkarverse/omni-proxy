@@ -10,13 +10,15 @@ DEFAULT_CONFIG = {
     "request_timeout_sec": 180,
     "gemini_bl": "boq_assistant-bard-web-server_20260716.08_p0",
     "auth_user": None,
-    "xsrf_token": None,
+    "xsrf_token": "",
     "default_model": "gemini-3.6-flash",
-    "log_requests": True,
-    "cookie_file": None,
-    "proxy": None,
+    "log_requests": False,
+    "cookie_file": "cookie.json",
+    "proxy": "",
     "api_keys": [],
-    "temporary_chats": False,
+    "openai_session_token": "", 
+    "openai_pow_token": "", 
+    "temporary_chats": True
 }
 
 CONFIG = dict(DEFAULT_CONFIG)
@@ -32,7 +34,7 @@ def load_config(path: str = None):
 
 def find_config():
     """Search for config file in standard locations."""
-    for p in ["./config.json", os.path.expanduser("~/.config/gemini-web2api/config.json")]:
+    for p in ["./config.json", os.path.expanduser("~/.config/omni_proxy/config.json")]:
         if os.path.exists(p):
             return p
     return None

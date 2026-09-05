@@ -193,12 +193,8 @@ def parse_tool_calls(text: str) -> tuple:
     clean = "".join(clean_parts).strip()
     return clean, tool_calls
 
-
-# ─── Google Native API helpers ─────────────────────────────────────────────────
-
-
 def build_tool_prompt(tool_defs: list) -> str:
-    """Build natural tool-use prompt for Gemini Web that avoids prompt-injection detection."""
+    """Build natural tool-use prompt for Gemini that avoids prompt-injection detection."""
     tool_spec = json.dumps(tool_defs, indent=2, ensure_ascii=False)
     return (
         "# Tool Use\n\n"

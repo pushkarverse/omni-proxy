@@ -12,6 +12,8 @@
     "sk-gemini"
   ],
   "cookie_file": null,
+  "openai_session_token": null,
+  "openai_pow_token": null,
   "proxy": null,
   "log_requests": true,
   "temporary_chats": false

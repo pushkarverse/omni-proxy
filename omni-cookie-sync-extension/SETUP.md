@@ -1,16 +1,17 @@
-# Gemini Cookie Sync Setup
+# Omni Cookie Sync Setup
 
-Short guide for extracting fresh Gemini auth data and applying it to `gemini-web2api`.
+Short guide for extracting fresh Gemini and ChatGPT auth data and applying it to `gemini-web2api`.
 
 ## What this extension exports
 
-The extension reads the current signed-in Gemini session and exports:
+The extension reads the current signed-in Gemini and ChatGPT sessions and exports:
 
 - Google session cookies
 - `SAPISID`
 - `SNlM0e` (`xsrf_token`)
 - `cfb2h` (`gemini_bl`)
 - `auth_user`
+- `openai_session_token` (ChatGPT)
 
 It saves them locally as `gemini-auth.json`.
 
@@ -19,9 +20,9 @@ It saves them locally as `gemini-auth.json`.
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
 3. Click **Load unpacked**
-4. Select the `gemini-cookie-sync-extension` folder
-5. Open [https://gemini.google.com/app](https://gemini.google.com/app)
-6. Sign in and refresh the page
+4. Select the `omni-cookie-sync-extension` folder
+5. Open [https://gemini.google.com/app](https://gemini.google.com/app) and [https://chatgpt.com/](https://chatgpt.com/)
+6. Sign in and refresh the pages
 7. Open the extension and click **Inspect session**
 8. Confirm the session looks ready
 9. Click **Export gemini-auth.json**
@@ -31,6 +32,7 @@ Expected ready state:
 ```text
 XSRF / SNlM0e: present
 gemini_bl / cfb2h: present
+ChatGPT session token: present
 Session and XSRF are ready for export.
 ```
 
@@ -65,6 +67,10 @@ jq \
       then .gemini_bl = $auth[0].gemini_bl
       else .
       end
+    | if (($auth[0].openai_session_token // "") | length) > 0
+      then .openai_session_token = $auth[0].openai_session_token
+      else .
+      end
   ' config.json > "$tmp" &&
 mv "$tmp" config.json
 
@@ -77,8 +83,10 @@ Quick check:
 jq '{
   cookie_file,
   auth_user,
+  openai_session_token,
   xsrf_token_set: ((.xsrf_token // "") | length > 0),
-  gemini_bl_set: ((.gemini_bl // "") | length > 0)
+  gemini_bl_set: ((.gemini_bl // "") | length > 0),
+  openai_session_token_set: ((.openai_session_token // "") | length > 0)
 }' config.json
 ```
 
@@ -105,4 +113,4 @@ curl -sS http://127.0.0.1:10012/v1/chat/completions \
 
 ## Keep it secret
 
-`gemini-auth.json` contains a real Google session. Do not share it, print it, or commit it to Git.
+`gemini-auth.json` contains real sessions. Do not share it, print it, or commit it to Git.

@@ -3,9 +3,8 @@ import json
 import time
 import uuid
 import re
-import urllib.request
+import re
 import urllib.parse
-import ssl
 import os
 import hashlib
 
@@ -17,32 +16,13 @@ except ImportError:
 
 from .config import CONFIG
 
-_ssl_ctx = None
 _cookie_cache = {"str": "", "sapisid": None, "mtime": 0}
-_httpx_client = None
-
 
 def log(msg: str):
     if CONFIG["log_requests"]:
         import sys
         sys.stderr.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
         sys.stderr.flush()
-
-
-def _get_ssl_ctx():
-    global _ssl_ctx
-    if _ssl_ctx is None:
-        _ssl_ctx = ssl.create_default_context()
-    return _ssl_ctx
-
-
-def _get_httpx_client():
-    global _httpx_client
-    if _httpx_client is None and HAS_HTTPX:
-        proxy = CONFIG.get("proxy")
-        transport = httpx.HTTPTransport(proxy=proxy) if proxy else None
-        _httpx_client = httpx.Client(transport=transport, timeout=CONFIG["request_timeout_sec"], verify=True)
-    return _httpx_client
 
 
 def load_cookie() -> tuple:
@@ -105,9 +85,9 @@ def _build_headers() -> dict:
 
 
 def _apply_chat_persistence_flags(inner: list) -> None:
-    """Apply Gemini Web persistence flags to an outgoing request payload."""
+    """Apply Gemini persistence flags to an outgoing request payload."""
     if CONFIG.get("temporary_chats", False):
-        # Match Gemini Web temporary-chat requests.
+        # Match Gemini temporary-chat requests.
         inner[41] = [1]
         inner[45] = 1
     else:
@@ -202,79 +182,80 @@ def extract_response_text(raw: str) -> str:
     return clean_text(last_text)
 
 
-def generate(prompt: str, model_id: int, think_mode: int, file_refs: list = None, extra_fields: dict = None) -> str:
-    """Non-streaming generation with retry."""
+import asyncio
+
+async def generate(prompt: str, model_id: int, think_mode: int, file_refs: list = None, extra_fields: dict = None) -> str:
     body = _build_payload(prompt, model_id, think_mode, file_refs, extra_fields).encode()
     url = _get_url()
     headers = _build_headers()
-    ctx = _get_ssl_ctx()
     proxy = CONFIG.get("proxy")
 
     last_err = None
     for attempt in range(CONFIG["retry_attempts"]):
         try:
-            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-            if proxy:
-                opener = urllib.request.build_opener(
-                    urllib.request.ProxyHandler({"http": proxy, "https": proxy}),
-                    urllib.request.HTTPSHandler(context=ctx)
-                )
-                resp = opener.open(req, timeout=CONFIG["request_timeout_sec"])
-            else:
-                resp = urllib.request.urlopen(req, context=ctx, timeout=CONFIG["request_timeout_sec"])
-            raw = resp.read().decode("utf-8", errors="replace")
-            return extract_response_text(raw)
+            async with httpx.AsyncClient(proxy=proxy, verify=True, timeout=CONFIG["request_timeout_sec"]) as client:
+                resp = await client.post(url, content=body, headers=headers)
+                resp.raise_for_status()
+                return extract_response_text(resp.text)
         except Exception as e:
             last_err = e
             if attempt < CONFIG["retry_attempts"] - 1:
                 log(f"Retry {attempt+1}/{CONFIG['retry_attempts']}: {e}")
-                time.sleep(CONFIG["retry_delay_sec"])
+                await asyncio.sleep(CONFIG["retry_delay_sec"])
     raise last_err
 
-
-def generate_stream(prompt: str, model_id: int, think_mode: int, file_refs: list = None, extra_fields: dict = None):
-    """Streaming generation via httpx with retry on connection failure."""
-    if not HAS_HTTPX:
-        text = generate(prompt, model_id, think_mode, file_refs, extra_fields)
-        if text:
-            yield text
-        return
-
+async def generate_stream(prompt: str, model_id: int, think_mode: int, file_refs: list = None, extra_fields: dict = None):
     body = _build_payload(prompt, model_id, think_mode, file_refs, extra_fields)
     url = _get_url()
     headers = _build_headers()
-    client = _get_httpx_client()
+    proxy = CONFIG.get("proxy")
 
     last_err = None
     emitted_raw_text = ""
     for attempt in range(CONFIG["retry_attempts"]):
         try:
-            with client.stream("POST", url, content=body, headers=headers) as resp:
-                resp.raise_for_status()
-                buf = ""
-                for chunk in resp.iter_text():
-                    buf += chunk
-                    if "BardErrorInfo" in buf:
-                        bard_err = re.search(r'BardErrorInfo\s*\[(\d+)\]', buf)
-                        if bard_err:
-                            raise RuntimeError(
-                                f"Gemini upstream rejected request: BardErrorInfo [{bard_err.group(1)}]"
-                            )
-                    while "\n" in buf:
-                        line, buf = buf.split("\n", 1)
-                        for t in _extract_texts_from_line(line):
-                            if t == emitted_raw_text or emitted_raw_text.startswith(t):
-                                continue
-                            if not t.startswith(emitted_raw_text):
-                                raise RuntimeError("Gemini stream content changed during retry")
-                            delta = clean_text(t[len(emitted_raw_text):], strip=False)
-                            emitted_raw_text = t
-                            if delta:
-                                yield delta
+            async with httpx.AsyncClient(proxy=proxy, verify=True, timeout=CONFIG["request_timeout_sec"]) as client:
+                async with client.stream("POST", url, content=body.encode(), headers=headers) as resp:
+                    resp.raise_for_status()
+                    buf = ""
+                    async for chunk in resp.aiter_text():
+                        buf += chunk
+                        if "BardErrorInfo" in buf:
+                            bard_err = re.search(r'BardErrorInfo\s*\[(\d+)\]', buf)
+                            if bard_err:
+                                raise RuntimeError(
+                                    f"Gemini upstream rejected request: BardErrorInfo [{bard_err.group(1)}]"
+                                )
+                        while "\n" in buf:
+                            line, buf = buf.split("\n", 1)
+                            for t in _extract_texts_from_line(line):
+                                if t == emitted_raw_text or emitted_raw_text.startswith(t):
+                                    continue
+                                if not t.startswith(emitted_raw_text):
+                                    raise RuntimeError("Gemini stream content changed during retry")
+                                delta = clean_text(t[len(emitted_raw_text):], strip=False)
+                                emitted_raw_text = t
+                                if delta:
+                                    yield delta
             return
         except Exception as e:
             last_err = e
             if attempt < CONFIG["retry_attempts"] - 1:
                 log(f"Stream retry {attempt+1}/{CONFIG['retry_attempts']}: {e}")
-                time.sleep(CONFIG["retry_delay_sec"])
+                await asyncio.sleep(CONFIG["retry_delay_sec"])
     raise last_err
+
+
+async def generate_images(prompt: str) -> list:
+    log(f"Requesting real Nano Banana images for prompt: {prompt}")
+    full_prompt = f"Generate an image of the following. ONLY return the image, no text: {prompt}"
+    try:
+        raw_response = await generate(full_prompt, 1, 0)
+        urls = re.findall(r'(https://lh3\.googleusercontent\.com/[a-zA-Z0-9_-]+)', raw_response)
+        if not urls:
+            log("No images found in the response. Gemini might have refused to generate it.")
+            return []
+        return list(set(urls))
+    except Exception as e:
+        log(f"Failed to generate images: {e}")
+        raise

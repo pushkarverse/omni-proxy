@@ -32,7 +32,8 @@ def main():
     print(f"omni-proxy v{__version__}")
     print(f"  Listening: http://0.0.0.0:{port}")
     print(f"  Base URL:  http://localhost:{port}/v1")
-    print(f"  Models:    {', '.join(MODELS.keys())}")
+    all_models = [m for provider in MODELS.values() for m in provider.keys()]
+    print(f"  Models:    {', '.join(all_models)}")
     print(f"  Cookie:    {'yes' if CONFIG.get('cookie_file') else 'none (anonymous)'}")
     print(f"  Proxy:     {CONFIG.get('proxy') or 'system env'}")
     print(f"  Streaming: {'httpx (true streaming)' if HAS_HTTPX else 'urllib (buffered)'}")
@@ -40,7 +41,7 @@ def main():
     print()
     try:
         import uvicorn
-        uvicorn.run("omni_proxy.api:app", host=CONFIG["host"], port=port)
+        uvicorn.run("omni_apis.api:app", host=CONFIG["host"], port=port)
     except KeyboardInterrupt:
         print("\nStopped.")
 

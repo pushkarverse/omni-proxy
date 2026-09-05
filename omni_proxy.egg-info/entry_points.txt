@@ -1,0 +1,2 @@
+[console_scripts]
+omni-proxy = omni_apis.__main__:main

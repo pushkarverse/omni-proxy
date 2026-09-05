@@ -8,11 +8,11 @@ import httpx
 from urllib.parse import urlparse
 
 from .config import CONFIG
-from .gemini import load_cookie, make_sapisidhash, _get_ssl_ctx, log
+from .gemini import load_cookie, make_sapisidhash, log
 
 
 async def _get_page_tokens() -> dict:
-    """Fetch WIZ_global_data tokens from Gemini page (Push-ID, X-Client-Pctx)."""
+    """Fetch WIZ_global_data tokens from Gemini page."""
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     }

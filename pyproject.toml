@@ -16,7 +16,7 @@ dependencies = [
 dev = ["pytest", "pytest-asyncio"]
 
 [project.scripts]
-omni-proxy = "omni_apis.api:app"
+omni-proxy = "omni_apis.__main__:main"
 
 [build-system]
 requires = ["setuptools>=68"]

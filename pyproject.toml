@@ -1,5 +1,5 @@
 [project]
-name = "omni-proxy"
+name = "gp"
 version = "1.1.0"
 description = "Convert Google Gemini into OpenAI-compatible API"
 readme = "README.md"

@@ -1,0 +1,192 @@
+Metadata-Version: 2.4
+Name: gp
+Version: 1.1.0
+Summary: Convert Google Gemini into OpenAI-compatible API
+License: MIT
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastapi>=0.100
+Requires-Dist: uvicorn>=0.23
+Requires-Dist: httpx>=0.25
+Requires-Dist: sqlalchemy>=2.0
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
+Dynamic: license-file
+
+<div align="center">
+  <img src="logo.png" width="220" alt="Omni-Proxy Logo">
+
+  <h1>Omni-Proxy</h1>
+  <p><strong>A high-performance API gateway for Google Gemini with an OpenAI-compatible interface.</strong></p>
+
+  <p>
+    <img alt="Python Version" src="https://img.shields.io/badge/python-3.8%2B-blue.svg">
+    <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi">
+    <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg">
+  </p>
+
+  <p>
+    <a href="#-key-features">Key Features</a> •
+    <a href="#-getting-started">Getting Started</a> •
+    <a href="#-supported-models">Models</a> •
+    <a href="#-advanced-configuration">Advanced Config</a>
+  </p>
+</div>
+
+---
+
+**Omni-Proxy** is an ultra-fast, zero-cost reverse proxy that exposes Google Gemini's web interface behind a single, unified, OpenAI-compatible API.
+
+Engineered entirely on modern asynchronous Python (FastAPI & HTTPX), Omni-Proxy is built to handle highly concurrent enterprise loads while remaining incredibly lightweight. Developers can harness the power of Gemini natively within existing OpenAI-compatible toolchains — no API key or billing account required.
+
+---
+
+## 🌟 Key Features
+
+### 🔌 Seamless Universal API
+Omni-Proxy acts as a perfect drop-in replacement for standard OpenAI SDKs. It natively exposes `/v1/chat/completions` and `/v1/models` endpoints, allowing integration with any OpenAI-compatible client (Cursor, ChatBox, LangChain, etc.) with zero code changes.
+
+### ⚡ Blazing Fast Architecture
+Built from the ground up on **FastAPI**, Omni-Proxy utilises a 100% asynchronous event loop. This ensures non-blocking I/O operations, dramatically minimising latency and maximising throughput under heavy parallel request loads.
+
+### 🛠️ Native Tool Calling
+Strict adherence to the OpenAI function-calling schema. Omni-Proxy parses and translates complex tool payloads between OpenAI specifications and Gemini's internal proprietary formats on the fly.
+
+### 🔍 Configurable Reasoning Depth
+Control Gemini's internal reasoning loop dynamically by appending `@think=N` to supported model strings (e.g., `gemini-3.5-flash-thinking@think=0`), allowing granular control over latency versus output depth.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.8 or higher
+- The blazing-fast `uv` package manager
+
+### 1. Installation
+
+Clone the repository and install the required dependencies instantly using `uv`:
+
+```bash
+git clone https://github.com/pushkarverse/omni-proxy.git
+cd omni-proxy
+
+# Create a virtual environment and install the app
+uv venv
+uv pip install -e .
+```
+
+### 2. Configuration Setup
+
+Copy the configuration template to initialise your local environment:
+```bash
+cp config.example.json config.json
+```
+
+**Authentication (Optional but Recommended):**
+By default, Omni-Proxy can operate anonymously for basic Gemini routing. To unlock advanced Gemini Pro features, mount your Gemini Advanced cookies into `cookie.json` and reference it via `"cookie_file": "cookie.json"`.
+
+*(Pro Tip: Utilise the bundled `cookie-sync` extension to effortlessly extract session tokens from your local browser. See the [Extension Setup Guide](cookie-sync/SETUP.md) for detailed instructions).*
+
+### 3. Initialise the Server
+
+Launch the ASGI server natively via `uv`:
+
+```bash
+uv run omni-proxy
+```
+
+The unified API will be exposed at `http://localhost:8081/v1`.
+
+---
+
+## 🤖 Supported Models
+
+Omni-Proxy actively maintains mappings for the following upstream Gemini models.
+
+| Model Identifier | Description | Notes |
+|------------------|-------------|-------|
+| `gemini-3.7-flash` | Latest iteration of the Flash architecture | Highly capable all-around model |
+| `gemini-3.6-flash` | Standard Flash model | **Default proxy fallback** |
+| `gemini-3.5-flash` | Alias for `gemini-3.6-flash` | Backend auto-upgraded |
+| `gemini-3.5-flash-thinking` | Extended reasoning engine | Capable of massive (~20k char) outputs |
+| `gemini-3.5-flash-thinking-lite` | Dynamic thinking with adaptive depth | Balanced speed vs. depth |
+| `gemini-3.1-pro` | Advanced reasoning & logic | *Requires active Gemini Advanced session* |
+| `gemini-3.1-pro-enhanced` | Pro with enhanced output | Experimental |
+| `gemini-auto` | Auto model selection | Let Gemini decide |
+| `gemini-flash-lite` | Ultra-fast, minimal latency | Ideal for high-throughput simple tasks |
+
+---
+
+## 💻 Integration Examples
+
+Omni-Proxy is designed for frictionless integration into existing automated pipelines.
+
+### Python (OpenAI SDK)
+
+```python
+from openai import OpenAI
+
+# Initialise client pointing to the local proxy
+client = OpenAI(base_url="http://localhost:8081/v1", api_key="sk-your-secure-key")
+
+# Text completion — routed to Gemini
+response = client.chat.completions.create(
+    model="gemini-3.6-flash",
+    messages=[{"role": "user", "content": "Explain the architecture of a reverse proxy."}]
+)
+print(response.choices[0].message.content)
+
+# Streaming
+stream = client.chat.completions.create(
+    model="gemini-3.5-flash-thinking",
+    messages=[{"role": "user", "content": "Walk me through transformer attention."}],
+    stream=True
+)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="")
+```
+
+### cURL (Direct API Access)
+
+```bash
+curl -X POST http://localhost:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-your-secure-key" \
+  -d '{
+    "model": "gemini-3.5-flash-thinking@think=0",
+    "messages": [{"role": "user", "content": "Initialise system diagnostic."}]
+  }'
+```
+
+---
+
+## 🛠️ Advanced Configuration
+
+### API Key Authentication
+For enterprise or remote deployments, secure your endpoints by populating the `"api_keys"` array in `config.json`. When populated, the proxy strictly enforces token validation via the standard `Authorization: Bearer <key>` header on all incoming requests.
+
+### Containerised Deployment (Docker)
+Omni-Proxy provides out-of-the-box Docker support for isolated environment execution.
+
+```bash
+# Prepare configuration
+cp config.example.json config.json
+
+# Build and deploy the container
+docker build -t omni-proxy .
+docker run -d --name omni-proxy -p 8081:8081 -v ./config.json:/app/config.json omni-proxy
+```
+
+---
+
+## 🔒 Security & Architecture Notes
+- **State Isolation**: Omni-Proxy treats all incoming requests statelessly. Multi-turn conversation context is simulated exclusively by analysing the `messages` array in the request payload.
+- **Upstream Volatility**: Gemini routing leverages the undocumented web API. Session cookies may expire; refresh them via the `cookie-sync` extension.
+
+---
+
+## 📝 License
+Distributed under the MIT License. See `LICENSE` for more information.

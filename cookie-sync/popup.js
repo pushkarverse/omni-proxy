@@ -33,15 +33,13 @@ const LOOKUP_URLS = [
   "https://gemini.google.com/app",
   "https://accounts.google.com/",
   "https://www.google.com/",
-  "https://google.com/",
-  "https://chatgpt.com/"
+  "https://google.com/"
 ];
 
 const statusEl = document.getElementById("status");
 const exportButton = document.getElementById("export");
 const inspectButton = document.getElementById("inspect");
 const openGeminiBtn = document.getElementById("open-gemini");
-const openChatGptBtn = document.getElementById("open-chatgpt");
 
 function setStatus(message, kind = "") {
   statusEl.textContent = message;
@@ -113,21 +111,6 @@ async function readGoogleCookies() {
   return [...deduped.values()];
 }
 
-async function readChatGPTCookies() {
-  const stores = await chrome.cookies.getAllCookieStores();
-  let sessionToken = null;
-
-  for (const store of stores) {
-    const cookies = await chrome.cookies.getAll({ storeId: store.id, url: "https://chatgpt.com/" });
-    const tokenCookie = cookies.find(c => c.name === "__Secure-next-auth.session-token");
-    if (tokenCookie) {
-      sessionToken = tokenCookie.value;
-      break;
-    }
-  }
-
-  return sessionToken;
-}
 
 function selectBestCookies(cookies) {
   const selected = new Map();
@@ -276,10 +259,9 @@ async function readGeminiPageMetadata(tabs) {
 }
 
 async function buildInspection() {
-  const [cookies, tabs, chatGptToken] = await Promise.all([
+  const [cookies, tabs] = await Promise.all([
     readGoogleCookies(),
-    chrome.tabs.query({ url: "https://gemini.google.com/*" }),
-    readChatGPTCookies()
+    chrome.tabs.query({ url: "https://gemini.google.com/*" })
   ]);
 
   const selected = selectBestCookies(cookies);
@@ -298,8 +280,7 @@ async function buildInspection() {
     legacyMissing,
     available,
     authUser,
-    pageMetadata,
-    chatGptToken
+    pageMetadata
   };
 }
 
@@ -312,8 +293,7 @@ function inspectionMessage(info) {
     legacyMissing,
     available,
     authUser,
-    pageMetadata,
-    chatGptToken
+    pageMetadata
   } = info;
 
   const lines = [
@@ -325,7 +305,6 @@ function inspectionMessage(info) {
     `gemini_bl / cfb2h: ${pageMetadata.geminiBl ? "present" : "missing"}`,
     `auth_user: ${authUser ?? "default account"}`,
     `Page data source: ${pageMetadata.source || "unavailable"}`,
-    `ChatGPT session token: ${chatGptToken ? "present" : "missing"}`,
     "",
     `Legacy present: ${legacyPresent.join(", ") || "none"}`,
     `Legacy not visible to the extension: ${legacyMissing.join(", ") || "none"}`,
@@ -375,10 +354,6 @@ openGeminiBtn.addEventListener("click", async () => {
   await chrome.tabs.create({ url: "https://gemini.google.com/app" });
 });
 
-openChatGptBtn.addEventListener("click", async () => {
-  await chrome.tabs.create({ url: "https://chatgpt.com/" });
-});
-
 inspectButton.addEventListener("click", async () => {
   inspectButton.disabled = true;
   setStatus("Inspecting session and page data…");
@@ -411,8 +386,7 @@ exportButton.addEventListener("click", async () => {
       sapisid: info.selected.get("SAPISID").value,
       auth_user: info.authUser,
       xsrf_token: info.pageMetadata.xsrfToken,
-      gemini_bl: info.pageMetadata.geminiBl,
-      openai_session_token: info.chatGptToken
+      gemini_bl: info.pageMetadata.geminiBl
     };
 
     await downloadJson("omni-auth.json", payload);
@@ -423,8 +397,7 @@ exportButton.addEventListener("click", async () => {
       `Session cookie: ${info.validation.sessionCookie}\n` +
       `XSRF: present\n` +
       `gemini_bl: ${info.pageMetadata.geminiBl ? "present" : "not present — current server setting will remain"}\n` +
-      `auth_user: ${info.authUser ?? "null"}\n` +
-      `ChatGPT Token: ${info.chatGptToken ? "present" : "missing"}\n\n` +
+      `auth_user: ${info.authUser ?? "null"}\n\n` +
       "Move the file into omni-proxy and do not share it or commit it to Git.",
       "ok"
     );

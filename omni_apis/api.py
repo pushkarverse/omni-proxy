@@ -2,6 +2,7 @@ import time
 import uuid
 import json
 import secrets
+import urllib.parse
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,7 +11,6 @@ from .config import CONFIG
 from .models import MODELS, resolve_model
 from .gemini import generate, generate_stream, log
 from .tools import messages_to_prompt, parse_tool_calls, google_contents_to_prompt, parse_google_function_calls
-from .multimodal import detect_image_mime, fetch_image_bytes, upload_image
 from . import __version__
 
 app = FastAPI(title="omni-proxy", version=__version__)
@@ -41,26 +41,6 @@ async def verify_api_key(request: Request):
         return
     raise HTTPException(status_code=401, detail="Invalid API key")
 
-async def _upload_images(images: list) -> list:
-    if not images:
-        return None
-    file_refs = []
-    for item in images:
-        if not (isinstance(item, tuple) and len(item) == 2):
-            continue
-        data, mime = item
-        if isinstance(data, str):
-            data = await fetch_image_bytes(data)
-            mime = mime or "image/png"
-        if not data:
-            raise RuntimeError("image fetch failed")
-        mime = detect_image_mime(data, mime or "image/png")
-        try:
-            ref = await upload_image(data, "image.png", mime or "image/png")
-            file_refs.append(ref)
-        except Exception as e:
-            raise RuntimeError(f"image upload failed: {e}") from e
-    return file_refs if file_refs else None
 
 @app.get("/")
 async def root():
@@ -95,27 +75,13 @@ async def chat_completions(request: Request, dependencies=Depends(verify_api_key
     tools = req.get("tools")
     tool_choice = req.get("tool_choice", "auto")
     stream = req.get("stream", False)
-    if provider == "openai":
-        from .chatgpt import handle_chatgpt_web_request
-        try:
-            return await handle_chatgpt_web_request(
-                model_name=model_name,
-                messages=req.get("messages", []),
-                stream=stream
-            )
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"ChatGPT upstream error: {e}")
     prompt, images = messages_to_prompt(req.get("messages", []), tools, tool_choice)
     if not prompt.strip():
         raise HTTPException(status_code=400, detail="empty prompt")
 
     cid = f"chatcmpl-{uuid.uuid4().hex[:12]}"
-    
-    try:
-        file_refs = await _upload_images(images)
-    except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=f"upstream error: {e}")
 
+    file_refs = None
     if stream and (not tools or tool_choice == "none"):
         async def event_generator():
             first_chunk = {
@@ -163,36 +129,4 @@ async def chat_completions(request: Request, dependencies=Depends(verify_api_key
                   "total_tokens": (len(prompt)+len(text or ""))//4},
     }
 
-@app.post("/v1/images/generations")
-async def handle_generate_images(request: Request, dependencies=Depends(verify_api_key)):
-    req = await request.json()
-    prompt = req.get("prompt")
-    model = req.get("model", "")
-    
-    if not prompt:
-        raise HTTPException(status_code=400, detail="Prompt is required for Image Generation")
-        
-    try:
-        from .models import resolve_model
-        _, _, _, err, _, provider = resolve_model(model or CONFIG["default_model"])
-        
-        if provider == "openai":
-            from .chatgpt import generate_images
-        else:
-            from .gemini import generate_images
-            
-        image_urls = await generate_images(prompt)
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Image generation failed: {e}")
-        
-    data = []
-    for url in image_urls:
-        data.append({
-            "url": url,
-            "revised_prompt": prompt
-        })
-    
-    return {
-        "created": int(time.time()),
-        "data": data
-    }
+

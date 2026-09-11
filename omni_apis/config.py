@@ -14,10 +14,8 @@ DEFAULT_CONFIG = {
     "default_model": "gemini-3.6-flash",
     "log_requests": False,
     "cookie_file": "cookie.json",
-    "proxy": "",
+    "proxy": None,
     "api_keys": [],
-    "openai_session_token": "", 
-    "openai_pow_token": "", 
     "temporary_chats": True
 }
 

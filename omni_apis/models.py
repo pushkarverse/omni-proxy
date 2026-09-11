@@ -37,20 +37,6 @@ MODELS = {
             "desc": "Lightweight fast model",
         }
     },
-    "openai": {
-        "gpt-3.5-turbo": {
-            "mode": 0, "think": 0,
-            "desc": "Standard ChatGPT model",
-        },
-        "gpt-4o": {
-            "mode": 0, "think": 0,
-            "desc": "Advanced ChatGPT model",
-        },
-        "gpt-4o-mini": {
-            "mode": 0, "think": 0,
-            "desc": "Fast ChatGPT model",
-        }
-    }
 }
 
 

@@ -9,7 +9,7 @@ from . import __version__
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Gemini & ChatGPT to OpenAI API")
+    parser = argparse.ArgumentParser(description="Gemini to OpenAI-compatible API proxy")
     parser.add_argument("--port", type=int, default=None)
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--cookie-file", type=str, default=None)

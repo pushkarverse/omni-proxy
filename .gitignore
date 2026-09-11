@@ -1,9 +1,19 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Config & Secrets
 config.json
-cookie.txt
 cookie.json
+omni-auth.json
 .env
-.idea
+
+# OS
 .DS_Store
-gemini-auth.json

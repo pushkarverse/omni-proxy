@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Omni Cookie Sync (Gemini & ChatGPT)</title>
+  <title>Omni Cookie Sync (Gemini)</title>
   <style>
     :root { color-scheme: light dark; }
     body {
@@ -27,7 +27,7 @@
     }
     button:disabled { opacity: .55; cursor: wait; }
     #export { background: #1769e0; color: white; }
-    #inspect, #open-gemini, #open-chatgpt { background: color-mix(in srgb, CanvasText 10%, Canvas); color: CanvasText; }
+    #inspect, #open-gemini { background: color-mix(in srgb, CanvasText 10%, Canvas); color: CanvasText; }
     #status {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -46,13 +46,12 @@
 </head>
 <body>
   <h1>Omni Cookie Sync</h1>
-  <p>Exports cookies, XSRF, and build metadata from the current Gemini and ChatGPT sessions to <code>omni-auth.json</code>. Nothing is sent over the network.</p>
+  <p>Exports cookies, XSRF, and build metadata from the current Gemini session to <code>omni-auth.json</code>. Nothing is sent over the network.</p>
   <button id="open-gemini" type="button">Open Gemini</button>
-  <button id="open-chatgpt" type="button">Open ChatGPT</button>
   <button id="inspect" type="button">Inspect session</button>
   <button id="export" type="button">Export omni-auth.json</button>
   <p id="status">Ready.</p>
-  <p class="note">Open Gemini and ChatGPT, sign in, then refresh the pages before inspection. The generated file contains highly sensitive session data; do not share it or commit it to Git.</p>
+  <p class="note">Open Gemini, sign in, then refresh the page before inspection. The generated file contains highly sensitive session data; do not share it or commit it to Git.</p>
   <script src="popup.js"></script>
 </body>
 </html>

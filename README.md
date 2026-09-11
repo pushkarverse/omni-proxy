@@ -2,7 +2,7 @@
   <img src="logo.png" width="220" alt="Omni-Proxy Logo">
 
   <h1>Omni-Proxy</h1>
-  <p><strong>A high-performance, unified API gateway for Google Gemini and OpenAI ChatGPT.</strong></p>
+  <p><strong>A high-performance API gateway for Google Gemini with an OpenAI-compatible interface.</strong></p>
 
   <p>
     <img alt="Python Version" src="https://img.shields.io/badge/python-3.8%2B-blue.svg">
@@ -20,34 +20,25 @@
 
 ---
 
-**Omni-Proxy** is an ultra-fast, zero-cost reverse proxy that bridges the web interfaces of Google Gemini and OpenAI ChatGPT behind a single, unified, OpenAI-compatible API. 
+**Omni-Proxy** is an ultra-fast, zero-cost reverse proxy that exposes Google Gemini's web interface behind a single, unified, OpenAI-compatible API.
 
-Engineered entirely on modern asynchronous Python (FastAPI & HTTPX), Omni-Proxy is built to handle highly concurrent enterprise loads while remaining incredibly lightweight. By intelligently routing requests based on model parameters, it allows developers to harness the power of both Gemini and ChatGPT natively within existing OpenAI-compatible toolchains.
+Engineered entirely on modern asynchronous Python (FastAPI & HTTPX), Omni-Proxy is built to handle highly concurrent enterprise loads while remaining incredibly lightweight. Developers can harness the power of Gemini natively within existing OpenAI-compatible toolchains — no API key or billing account required.
 
 ---
 
 ## 🌟 Key Features
 
 ### 🔌 Seamless Universal API
-Omni-Proxy acts as a perfect drop-in replacement for standard OpenAI SDKs. It natively exposes `/v1/chat/completions`, `/v1/images/generations`, and `/v1/models` endpoints, allowing integration with any OpenAI-compatible client (Cursor, ChatBox, LangChain, etc.) with zero code changes.
-
-### 🧠 Intelligent Multi-Provider Routing
-Traffic is dynamically and intelligently routed between Google (Gemini) and OpenAI (ChatGPT) based purely on the `model` parameter you request. The proxy handles the complex backend protocols invisibly.
+Omni-Proxy acts as a perfect drop-in replacement for standard OpenAI SDKs. It natively exposes `/v1/chat/completions` and `/v1/models` endpoints, allowing integration with any OpenAI-compatible client (Cursor, ChatBox, LangChain, etc.) with zero code changes.
 
 ### ⚡ Blazing Fast Architecture
-Built from the ground up on **FastAPI**, Omni-Proxy utilizes a 100% asynchronous event loop. This ensures non-blocking I/O operations, dramatically minimizing latency and maximizing throughput under heavy parallel request loads.
-
-### 🎨 Native Image Generation
-Full support for AI image generation via the `/v1/images/generations` endpoint. Depending on the model you request, Omni-Proxy seamlessly routes generation tasks to either OpenAI (DALL-E 3) or Google Gemini (Imagen 3).
-
-### 👁️ Vision & Multimodal Capabilities
-First-class support for image comprehension. Upload images via base64 encoding or direct URL links, powered seamlessly by Google Gemini's "Scotty" resumable upload protocol.
+Built from the ground up on **FastAPI**, Omni-Proxy utilises a 100% asynchronous event loop. This ensures non-blocking I/O operations, dramatically minimising latency and maximising throughput under heavy parallel request loads.
 
 ### 🛠️ Native Tool Calling
 Strict adherence to the OpenAI function-calling schema. Omni-Proxy parses and translates complex tool payloads between OpenAI specifications and Gemini's internal proprietary formats on the fly.
 
 ### 🔍 Configurable Reasoning Depth
-Control Gemini's internal reasoning loop dynamically by appending `@think=N` to supported model strings (e.g., `gemini-3.5-flash-thinking@think=0`), allowing for granular control over latency versus output depth.
+Control Gemini's internal reasoning loop dynamically by appending `@think=N` to supported model strings (e.g., `gemini-3.5-flash-thinking@think=0`), allowing granular control over latency versus output depth.
 
 ---
 
@@ -72,20 +63,17 @@ uv pip install -e .
 
 ### 2. Configuration Setup
 
-Copy the configuration template to initialize your local environment:
+Copy the configuration template to initialise your local environment:
 ```bash
 cp config.example.json config.json
 ```
 
 **Authentication (Optional but Recommended):**
-By default, Omni-Proxy can operate anonymously for basic Gemini routing. To unlock advanced features (ChatGPT, DALL-E 3, and Gemini Pro), you must provision the proxy with your web session cookies:
+By default, Omni-Proxy can operate anonymously for basic Gemini routing. To unlock advanced Gemini Pro features, mount your Gemini Advanced cookies into `cookie.json` and reference it via `"cookie_file": "cookie.json"`.
 
-1. **ChatGPT**: Inject `"openai_session_token"` and `"openai_pow_token"` into `config.json`.
-2. **Gemini**: Mount your Gemini Advanced cookies into a `cookie.txt` file and reference it via `"cookie_file": "cookie.txt"`.
+*(Pro Tip: Utilise the bundled `cookie-sync` extension to effortlessly extract session tokens from your local browser. See the [Extension Setup Guide](cookie-sync/SETUP.md) for detailed instructions).*
 
-*(Pro Tip: Utilize the bundled `cookie-sync` extension to effortlessly extract session tokens from your local browser. See the [Extension Setup Guide](cookie-sync/SETUP.md) for detailed instructions).*
-
-### 3. Initialize the Server
+### 3. Initialise the Server
 
 Launch the ASGI server natively via `uv`:
 
@@ -99,25 +87,19 @@ The unified API will be exposed at `http://localhost:8081/v1`.
 
 ## 🤖 Supported Models
 
-Omni-Proxy actively maintains mappings for the following upstream models.
+Omni-Proxy actively maintains mappings for the following upstream Gemini models.
 
-### Google Gemini Ecosystem
 | Model Identifier | Description | Notes |
 |------------------|-------------|-------|
 | `gemini-3.7-flash` | Latest iteration of the Flash architecture | Highly capable all-around model |
 | `gemini-3.6-flash` | Standard Flash model | **Default proxy fallback** |
+| `gemini-3.5-flash` | Alias for `gemini-3.6-flash` | Backend auto-upgraded |
 | `gemini-3.5-flash-thinking` | Extended reasoning engine | Capable of massive (~20k char) outputs |
+| `gemini-3.5-flash-thinking-lite` | Dynamic thinking with adaptive depth | Balanced speed vs. depth |
 | `gemini-3.1-pro` | Advanced reasoning & logic | *Requires active Gemini Advanced session* |
+| `gemini-3.1-pro-enhanced` | Pro with enhanced output | Experimental |
+| `gemini-auto` | Auto model selection | Let Gemini decide |
 | `gemini-flash-lite` | Ultra-fast, minimal latency | Ideal for high-throughput simple tasks |
-| `imagen-3` | Image Generation Engine | Automatically invoked for `/images/generations` |
-
-### OpenAI ChatGPT Ecosystem
-| Model Identifier | Description | Notes |
-|------------------|-------------|-------|
-| `gpt-4o` | Standard GPT-4 Omni | *Requires active ChatGPT session* |
-| `gpt-4o-mini` | Optimized, lightweight GPT-4o | *Requires active ChatGPT session* |
-| `gpt-3.5-turbo` | Legacy GPT architecture | *Requires active ChatGPT session* |
-| `dall-e-3` | Image Generation Engine | Automatically invoked for `/images/generations` |
 
 ---
 
@@ -130,27 +112,24 @@ Omni-Proxy is designed for frictionless integration into existing automated pipe
 ```python
 from openai import OpenAI
 
-# Initialize client pointing to the local proxy
+# Initialise client pointing to the local proxy
 client = OpenAI(base_url="http://localhost:8081/v1", api_key="sk-your-secure-key")
 
-# Text Completion (Routed to ChatGPT)
+# Text completion — routed to Gemini
 response = client.chat.completions.create(
-    model="gpt-4o",
+    model="gemini-3.6-flash",
     messages=[{"role": "user", "content": "Explain the architecture of a reverse proxy."}]
 )
 print(response.choices[0].message.content)
 
-# Multimodal Vision (Routed to Gemini)
-vision_response = client.chat.completions.create(
-    model="gemini-3.6-flash",
-    messages=[{
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "Analyze the structural integrity of this bridge."},
-            {"type": "image_url", "image_url": {"url": "https://example.com/bridge.png"}}
-        ]
-    }]
+# Streaming
+stream = client.chat.completions.create(
+    model="gemini-3.5-flash-thinking",
+    messages=[{"role": "user", "content": "Walk me through transformer attention."}],
+    stream=True
 )
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="")
 ```
 
 ### cURL (Direct API Access)
@@ -161,7 +140,7 @@ curl -X POST http://localhost:8081/v1/chat/completions \
   -H "Authorization: Bearer sk-your-secure-key" \
   -d '{
     "model": "gemini-3.5-flash-thinking@think=0",
-    "messages": [{"role": "user", "content": "Initialize system diagnostic."}]
+    "messages": [{"role": "user", "content": "Initialise system diagnostic."}]
   }'
 ```
 
@@ -172,7 +151,7 @@ curl -X POST http://localhost:8081/v1/chat/completions \
 ### API Key Authentication
 For enterprise or remote deployments, secure your endpoints by populating the `"api_keys"` array in `config.json`. When populated, the proxy strictly enforces token validation via the standard `Authorization: Bearer <key>` header on all incoming requests.
 
-### Containerized Deployment (Docker)
+### Containerised Deployment (Docker)
 Omni-Proxy provides out-of-the-box Docker support for isolated environment execution.
 
 ```bash
@@ -187,8 +166,8 @@ docker run -d --name omni-proxy -p 8081:8081 -v ./config.json:/app/config.json o
 ---
 
 ## 🔒 Security & Architecture Notes
-- **Upstream Volatility**: ChatGPT routing leverages undocumented internal web APIs (`/backend-api/`). While Omni-Proxy intelligently manages caching and Proof-of-Work (PoW) security challenges, rapid upstream architectural shifts by OpenAI may necessitate proxy updates.
-- **State Isolation**: Omni-Proxy treats all incoming requests statelessly. Multi-turn conversation context is simulated exclusively by analyzing the `messages` array in the request payload.
+- **State Isolation**: Omni-Proxy treats all incoming requests statelessly. Multi-turn conversation context is simulated exclusively by analysing the `messages` array in the request payload.
+- **Upstream Volatility**: Gemini routing leverages the undocumented web API. Session cookies may expire; refresh them via the `cookie-sync` extension.
 
 ---
 

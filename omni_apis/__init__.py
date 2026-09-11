@@ -1,2 +1,2 @@
-"""omni_proxy: Gemini & ChatGPT to OpenAI API proxy."""
+"""omni_proxy: Gemini to OpenAI-compatible API proxy."""
 __version__ = "1.1.0"

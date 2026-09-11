@@ -195,6 +195,8 @@ async def generate(prompt: str, model_id: int, think_mode: int, file_refs: list 
         try:
             async with httpx.AsyncClient(proxy=proxy, verify=True, timeout=CONFIG["request_timeout_sec"]) as client:
                 resp = await client.post(url, content=body, headers=headers)
+                with open("raw_gemini_actual.txt", "w", encoding="utf-8") as f:
+                    f.write(resp.text)
                 resp.raise_for_status()
                 return extract_response_text(resp.text)
         except Exception as e:
@@ -246,16 +248,3 @@ async def generate_stream(prompt: str, model_id: int, think_mode: int, file_refs
     raise last_err
 
 
-async def generate_images(prompt: str) -> list:
-    log(f"Requesting real Nano Banana images for prompt: {prompt}")
-    full_prompt = f"Generate an image of the following. ONLY return the image, no text: {prompt}"
-    try:
-        raw_response = await generate(full_prompt, 1, 0)
-        urls = re.findall(r'(https://lh3\.googleusercontent\.com/[a-zA-Z0-9_-]+)', raw_response)
-        if not urls:
-            log("No images found in the response. Gemini might have refused to generate it.")
-            return []
-        return list(set(urls))
-    except Exception as e:
-        log(f"Failed to generate images: {e}")
-        raise

@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
     "cookie_file": "cookie.json",
     "proxy": None,
     "api_keys": [],
-    "temporary_chats": True
+    "temporary_chats": False
 }
 
 CONFIG = dict(DEFAULT_CONFIG)

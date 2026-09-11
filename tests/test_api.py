@@ -29,7 +29,7 @@ class APITests(unittest.TestCase):
         self.assertIn("gemini-3.6-flash", models)
         self.assertNotIn("gpt-4o", models)
 
-    @patch("omni_apis.gemini.generate", new_callable=AsyncMock)
+    @patch("omni_apis.api.generate", new_callable=AsyncMock)
     def test_chat_completions_gemini(self, mock_generate):
         mock_generate.return_value = "Hello from Gemini"
 
